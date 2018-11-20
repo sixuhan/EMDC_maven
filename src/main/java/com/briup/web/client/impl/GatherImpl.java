@@ -2,28 +2,35 @@ package com.briup.web.client.impl;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 import com.briup.bean.Environment;
+import com.briup.log.Log;
+import com.briup.log.impl.LogImpl;
 import com.briup.util.Configuration;
 import com.briup.web.client.Gather;
 
 public class GatherImpl implements Gather{
-
+	private String srcFile;
+	private Log log;
+	private Configuration con;
+	
 	@Override
 	public void init(Properties properties) throws Exception {
 		// TODO Auto-generated method stub
-		
+		srcFile = properties.getProperty("src-file");
+	
 	}
 
 	@Override
 	public void setConfiguration(Configuration con) {
 		// TODO Auto-generated method stub
-		
+		this.con = con;
 	}
 
 	@Override
@@ -43,8 +50,17 @@ public class GatherImpl implements Gather{
 		 * 4.将得到的数据封装成Environment对象
 		 * 5.将得到的Environment对象保存到集合
 		 */
-		BufferedReader br = new BufferedReader(new FileReader("src/main/java/com/briup/file/radwtmp"));
-		ArrayList<Environment> environment= new ArrayList();
+		
+		
+		
+		/**
+		 * 需要考虑采集文件的内容是一直在增长的
+		 * 因此下次采集之前需要跳过上次已经采集的字节数
+		 * 采集之前需要先判断是否存在记录文件
+		 */
+		log = con.getLogger();
+		BufferedReader br = new BufferedReader(new FileReader(srcFile));
+		ArrayList<Environment> environment= new ArrayList<Environment>();
 		String msg;             //将文件中的一行数据保存进msg
 		String[] split;			//字符数组，用以保存拆分出的数据
 		String srcid;           //发送端id
@@ -55,22 +71,26 @@ public class GatherImpl implements Gather{
 		String cmd;          //指令标号
 		String data; 		//数据信息
 		int status;			//状态信息
-		Date date;			//最原始的数据
 		float siduzhi;		//湿度传感器10进制的值
 		float wenduzhi;		//湿度传感器10进制的值
 		Environment em;  //临时存放environment 对象
 		Timestamp gather_date; //时间戳
+		int index1 = 0;			//温度和湿度的条数
+		int index2 = 0;			//光照的条数
+		int index3 = 0;         //二氧化碳的条数
 		while((msg = br.readLine()) != null) {
 			split = msg.split("[|]");
 			srcid = split[0];
 			dstid = split[1];
 			devid = split[2];
 			sersorAddress = split[3];
-			count = Integer.parseInt(split[4]);
+			count = Integer.parseInt(split[4]);   //String转int
 			cmd = split[5];
 			data = split[6];
 			status = Integer.parseInt(split[7]);
 			gather_date = new Timestamp(Long.parseLong(split[8]));
+			
+			//湿度和温度
 			if("16".equals(sersorAddress)) {
 				int value1 = Integer.parseInt(data.substring(0, 4),16);
 				int value2 = Integer.parseInt(data.substring(4, 8),16);
@@ -80,18 +100,32 @@ public class GatherImpl implements Gather{
 				environment.add(em);
 				em = new Environment("humidity", srcid, dstid, devid, sersorAddress, count, cmd, status, siduzhi, gather_date);				
 				environment.add(em);
+				index1++;
 			}
+			
+			//光照强度
 			if("256".equals(sersorAddress)) {
 				int value = Integer.parseInt(data.substring(0, 4), 16);
 				em = new Environment("light", srcid, dstid, devid, sersorAddress, count, cmd, status, value, gather_date);
 				environment.add(em);
+				index2++;
 			}
+			
+			//二氧化碳
 			if("1280".equals(sersorAddress)) {
 				int value = Integer.parseInt(data.substring(0, 4), 16);
 				em = new Environment("CO", srcid, dstid, devid, sersorAddress, count, cmd, status, value, gather_date);
 				environment.add(em);
+				index3++;
 			}
 		}
+		if(br != null) {
+			br.close();
+		}
+		log.info("数据采集完成");
+		log.info("湿度和温度一共有:" + index1);
+		log.info("光照强度一共有:" + index2);
+		log.info("二氧化碳一共有:" + index3);
 		return environment;
 	}
 }

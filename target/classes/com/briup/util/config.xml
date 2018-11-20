@@ -6,16 +6,16 @@
 	<dbstore class="com.briup.web.server.impl.DBStoreImpl">
 		<driver>oracle.jdbc.driver.OracleDriver</driver>
 		<url>jdbc:oracle:thin:@127.0.0.1:1521:XE</url>
-		<username>lw2</username>
-		<password>lw2</password>
-		<batch-size>500</batch-size>
+		<user>briup</user>
+		<password>briup</password>
+		<batch_size>500</batch_size>
 	</dbstore>
 	<client class="com.briup.web.client.impl.ClientImpl">
 		<ip>localhost</ip>
 		<port>9999</port>
 	</client>
 	<gather class="com.briup.web.client.impl.GatherImpl">
-		<src-file>src/com/briup/file/radwtmp</src-file>
+		<src-file>src/main/java/com/briup/file/radwtmp</src-file>
 		<record-file>src/com/briup/file/record</record-file>
 	</gather>
 	<logger class="com.briup.log.impl.LogImpl">
